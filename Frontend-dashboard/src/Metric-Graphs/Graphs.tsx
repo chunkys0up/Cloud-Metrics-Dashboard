@@ -1,16 +1,7 @@
 import { useEffect, useRef } from "react";
 import * as Plot from "@observablehq/plot";
 
-interface LinePoint {
-  date: Date;
-  ms: number;
-}
-
-interface PlotChartProps {
-  data: LinePoint[];
-}
-
-export function LineGraph({ data }: PlotChartProps) {
+export function LineGraph({ data }: any) {
   const chartRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -25,7 +16,7 @@ export function LineGraph({ data }: PlotChartProps) {
       y: { grid: true, label: "Average Latency (ms)" },
       marks: [
         Plot.ruleY([0]),
-        Plot.lineY(data, { x: "date", y: "ms", stroke: "blue" })
+        Plot.lineY(data, { x: d => new Date(d.date), y: "ms", stroke: "blue" })
       ]
     });
 
@@ -43,17 +34,7 @@ export function LineGraph({ data }: PlotChartProps) {
   );
 }
 
-
-interface BarPoint {
-  column_name: string;
-  column_value: number;
-}
-
-interface BarGraphProps {
-  data: BarPoint[];
-}
-
-export function BarGraph({ data }: BarGraphProps) {
+export function BarGraph({ data }: any) {
   const chartRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -61,13 +42,18 @@ export function BarGraph({ data }: BarGraphProps) {
 
     chartRef.current.innerHTML = "";
 
+    const dataMax = Math.max(...data.map((d: any) => d.column_value));
+    const defaultMax = 500;
+
+    const xMax = Math.max(defaultMax, dataMax);
+
     const chart = Plot.plot({
       width: chartRef.current.clientWidth,
       height: chartRef.current.clientHeight,
       marks: [
         Plot.axisX({ label: null, lineWidth: 8 }),
         Plot.axisY({ label: "Requests" }),
-        Plot.ruleY([0]),
+        Plot.ruleY([xMax]),
         Plot.barY(data, { x: "column_name", y: "column_value", fill: "steelblue" })
       ]
     });
@@ -85,18 +71,7 @@ export function BarGraph({ data }: BarGraphProps) {
   );
 }
 
-
-interface StackedBarPoint {
-  resource: string;
-  type: string;
-  percent: number;
-}
-
-interface StackedBarProps {
-  data: StackedBarPoint[];
-}
-
-export function StackedBarsGraph({ data }: StackedBarProps) {
+export function StackedBarsGraph({ data }: any) {
   const chartRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -134,18 +109,7 @@ export function StackedBarsGraph({ data }: StackedBarProps) {
   );
 }
 
-
-interface MultiLinePoint {
-  date: Date;
-  value: number;
-  symbol: string;
-}
-
-interface MultiLineProps {
-  data: MultiLinePoint[];
-}
-
-export function MultiLineChart({ data }: MultiLineProps) {
+export function MultiLineChart({ data }: any) {
   const chartRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -153,15 +117,20 @@ export function MultiLineChart({ data }: MultiLineProps) {
 
     chartRef.current.innerHTML = "";
 
+    const dataMax = Math.max(...data.map((d: any) => d.value));
+    const defaultMax = 500;
+
+    const xMax = Math.max(defaultMax, dataMax);
+
     const chart = Plot.plot({
       style: "overflow: visible;",
       y: { grid: true },
       width: chartRef.current.clientWidth,
       height: chartRef.current.clientHeight,
       marks: [
-        Plot.ruleY([0]),
-        Plot.lineY(data, { x: "date", y: "value", stroke: "symbol" }),
-        Plot.text(data, Plot.selectLast({ x: "date", y: "value", z: "symbol", text: "symbol", textAnchor: "start", dx: 3 }))
+        Plot.ruleY([xMax]),
+        Plot.lineY(data, { x: d => new Date(d.date), y: "value", stroke: "symbol" }),
+        Plot.text(data, Plot.selectLast({ x: d => new Date(d.date), y: "value", z: "symbol", text: "symbol", textAnchor: "start", dx: 3 }))
       ]
     });
 

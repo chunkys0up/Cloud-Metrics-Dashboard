@@ -1,95 +1,156 @@
 import './style.css';
-import { LineGraph, BarGraph, StackedBarsGraph, MultiLineChart } from './Metric-Graphs/Traffic';
+import { LineGraph, BarGraph, StackedBarsGraph, MultiLineChart } from './Metric-Graphs/Graphs';
+import { useEffect, useState } from 'react';
+
+interface SiteData {
+  TotalRequests: number;
+  FailedRequests: number;
+  AverageLatencyMs: number[];
+}
+interface NetworkTraffic {
+  RxBytesRate: number;
+  TxBytesRate: number;
+}
+interface ServerData {
+  CpuUsed: number;
+  MemoryUsed: number;
+  DiskUsed: number;
+  NetworkTraffic: NetworkTraffic;
+}
+interface Metrics {
+  SiteData: SiteData;
+  ServerData: ServerData;
+}
+interface Report {
+  Timestamp: string;
+  Metrics: Metrics;
+}
+
+const initialRequestMetrics = [
+  { column_name: "Total Requests", column_value: 0 },
+  { column_name: "Failed Requests", column_value: 0 }
+];
+
+const sampleLineData = [
+  { date: "2023-01-01T00:00:00", ms: 120 },
+  { date: "2023-01-01T00:00:01", ms: 125 },
+  { date: "2023-01-01T00:00:02", ms: 118 },
+  { date: "2023-01-01T00:00:03", ms: 132 },
+  { date: "2023-01-01T00:00:04", ms: 127 },
+  { date: "2023-01-01T00:00:05", ms: 140 },
+  { date: "2023-01-01T00:00:06", ms: 136 },
+  { date: "2023-01-01T00:00:07", ms: 142 },
+  { date: "2023-01-01T00:00:08", ms: 138 },
+  { date: "2023-01-01T00:00:09", ms: 150 },
+  { date: "2023-01-01T00:00:10", ms: 147 },
+  { date: "2023-01-01T00:00:11", ms: 145 },
+  { date: "2023-01-01T00:00:12", ms: 152 },
+  { date: "2023-01-01T00:00:13", ms: 149 },
+  { date: "2023-01-01T00:00:14", ms: 155 }
+];
+
+type computerMetric = {
+  resource: "CPU" | "Memory" | "Disk";
+  type: "used" | "unused";
+  percent: number;
+}
+
+type networkMetric = {
+  date: string;
+  value: number;
+  symbol: "RX" | "TX";
+}
 
 function App() {
+  const [computerMetrics, setComputerMetrics] = useState<computerMetric[]>([]);
+  const [requestMetrics, setRequestMetrics] = useState(initialRequestMetrics);
+  const [multiLineData, setMultiLineData] = useState<networkMetric[]>([]);
 
-  const sampleLineData = [
-    { date: new Date("2023-01-01"), ms: 120 },
-    { date: new Date("2023-01-02"), ms: 130 },
-    { date: new Date("2023-01-03"), ms: 125 },
-    { date: new Date("2023-01-04"), ms: 135 },
-    { date: new Date("2023-01-05"), ms: 128 },
-    { date: new Date("2023-01-06"), ms: 140 },
-    { date: new Date("2023-01-07"), ms: 145 },
-    { date: new Date("2023-01-08"), ms: 138 },
-    { date: new Date("2023-01-09"), ms: 150 },
-    { date: new Date("2023-01-10"), ms: 155 },
-    { date: new Date("2023-01-11"), ms: 90 },
-    { date: new Date("2023-01-12"), ms: 75 },
-    { date: new Date("2023-01-13"), ms: 83 },
-    { date: new Date("2023-01-14"), ms: 101 },
-  ];
+  async function getData() {
+    try {
+      const response = await fetch(`http://localhost:8080/get/`);
+      if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
 
-  const sampleBarData = [
-    { column_name: "Total Requests", column_value: 123 },
-    { column_name: "Failed Requests", column_value: 4 }
-  ];
+      const data: Report = await response.json();
 
-  const sampleStackedBarsData = [
-    { resource: "CPU", type: "used", percent: 23 },
-    { resource: "CPU", type: "unused", percent: 77 },
-    { resource: "Memory", type: "used", percent: 45 },
-    { resource: "Memory", type: "unused", percent: 55 },
-    { resource: "Disk", type: "used", percent: 5 },
-    { resource: "Disk", type: "unused", percent: 95 }
-  ];
+      // set computer metrics
+      const newMetrics: computerMetric[] = [
+        { resource: "CPU", type: "used", percent: data.Metrics.ServerData.CpuUsed },
+        { resource: "CPU", type: "unused", percent: 100 - data.Metrics.ServerData.CpuUsed },
+        { resource: "Memory", type: "used", percent: data.Metrics.ServerData.MemoryUsed },
+        { resource: "Memory", type: "unused", percent: 100 - data.Metrics.ServerData.MemoryUsed },
+        { resource: "Disk", type: "used", percent: data.Metrics.ServerData.DiskUsed },
+        { resource: "Disk", type: "unused", percent: 100 - data.Metrics.ServerData.DiskUsed }
+      ];
+      setComputerMetrics(prev => [...prev, ...newMetrics]);
 
-  const multiDataLineData = [
-    { date: new Date("2025-08-04T12:00:00"), value: 1200, symbol: "RX" },
-    { date: new Date("2025-08-04T12:00:00"), value: 800, symbol: "TX" },
+      // update the total requests
+      setRequestMetrics([
+        { column_name: "Total Requests", column_value: data.Metrics.SiteData.TotalRequests },
+        { column_name: "Failed Requests", column_value: data.Metrics.SiteData.FailedRequests }
+      ]);
 
-    { date: new Date("2025-08-04T12:00:05"), value: 1500, symbol: "RX" },
-    { date: new Date("2025-08-04T12:00:05"), value: 950, symbol: "TX" },
+      // add to the multilined graph
+      const rxMetric: networkMetric = {
+        date: data.Timestamp,
+        value: data.Metrics.ServerData.NetworkTraffic.RxBytesRate,
+        symbol: "RX"
+      };
+      const txMetric: networkMetric = {
+        date: data.Timestamp,
+        value: data.Metrics.ServerData.NetworkTraffic.TxBytesRate,
+        symbol: "TX"
+      };
+      setMultiLineData(prev => [...prev, rxMetric, txMetric]);
 
-    { date: new Date("2025-08-04T12:00:10"), value: 1700, symbol: "RX" },
-    { date: new Date("2025-08-04T12:00:10"), value: 1100, symbol: "TX" },
 
-    { date: new Date("2025-08-04T12:00:15"), value: 1400, symbol: "RX" },
-    { date: new Date("2025-08-04T12:00:15"), value: 1050, symbol: "TX" },
+    } catch (error) {
+      console.error("Error calling API:", error);
+    }
+  }
 
-    { date: new Date("2025-08-04T12:00:20"), value: 1600, symbol: "RX" },
-    { date: new Date("2025-08-04T12:00:20"), value: 1200, symbol: "TX" },
+  useEffect(() => {
+    getData();
 
-    { date: new Date("2025-08-04T12:00:25"), value: 1900, symbol: "RX" },
-    { date: new Date("2025-08-04T12:00:25"), value: 1400, symbol: "TX" },
+    const interval = setInterval(() => {
+      getData();
+    }, 1000);
 
-    { date: new Date("2025-08-04T12:00:30"), value: 2100, symbol: "RX" },
-    { date: new Date("2025-08-04T12:00:30"), value: 1600, symbol: "TX" }
-  ];
+    console.log("Went through...");
 
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="w-screen h-screen flex flex-col ">
       {/* Header */}
-      <h1 className="w-full border-b-2 font-bold text-2xl p-3 flex items-center justify-between">
+      <h1 className="flex-shrink-0 w-full border-b-2 font-bold text-2xl p-3 flex items-center justify-between">
         Cloud Metrics
-
         <div className="text-sm text-gray-600 italic">Connected to...</div>
       </h1>
-
+  
       {/* Grid Section */}
-      <div className="grid grid-rows-2 grid-cols-2 flex-grow p-1 gap-1">
-
-        <div className="bg-white w-[95%] h-[95%] border-2 border-gray-300 p-2 rounded-3xl">
+      <div className="grid grid-rows-2 grid-cols-2 flex-grow gap-4 p-4 min-h-0">
+        <div className="bg-white border-2 border-gray-300 p-4 rounded-3xl flex flex-col min-h-0">
           <LineGraph data={sampleLineData} />
         </div>
-
-        <div className="bg-white w-[95%] h-[95%] border-2 border-gray-300 p-2 rounded-3xl">
-          <BarGraph data={sampleBarData} />
+  
+        <div className="bg-white border-2 border-gray-300 p-4 rounded-3xl flex flex-col min-h-0">
+          <BarGraph data={requestMetrics} />
         </div>
-
-        <div className="flex justify-center items-center bg-white w-[95%] h-[95%] border-2 border-gray-300 p-2 rounded-3xl">
-          <StackedBarsGraph data={sampleStackedBarsData} />
+  
+        <div className="bg-white border-2 border-gray-300 p-4 rounded-3xl flex flex-col min-h-0">
+          <StackedBarsGraph data={computerMetrics} />
         </div>
-
-        <div className="flex justify-center items-center bg-white w-[95%] h-[95%] border-2 border-gray-300 p-2 rounded-3xl">
-          <MultiLineChart data={multiDataLineData} />
+  
+        <div className="bg-white border-2 border-gray-300 p-4 rounded-3xl flex flex-col min-h-0">
+          <MultiLineChart data={multiLineData} />
         </div>
-
       </div>
     </div>
+  );
+  
 
-  )
 }
 
 export default App
