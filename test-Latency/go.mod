@@ -2,8 +2,9 @@ module test-Latency
 
 go 1.24.3
 
+require github.com/chunkys0up/Cloud-Metrics-Dashboard/Metrics v0.0.0-20250813015853-0aad9c76a7bd
+
 require (
-	github.com/chunkys0up/Cloud-Metrics-Dashboard/Metrics v0.0.0-20250813015853-0aad9c76a7bd // indirect
 	github.com/ebitengine/purego v0.8.4 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect

@@ -1,4 +1,4 @@
-package metrics
+package Metrics
 
 import (
 	"encoding/json"
