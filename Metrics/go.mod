@@ -1,4 +1,4 @@
-module Metrics
+module github.com/chunkys0up/Cloud-Metrics-Dashboard/Metrics
 
 go 1.24.3
 

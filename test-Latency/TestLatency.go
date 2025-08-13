@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-
+	"github.com/chunkys0up/Cloud-Metrics-Dashboard/Metrics"
 )
 
 type SampleData struct {
