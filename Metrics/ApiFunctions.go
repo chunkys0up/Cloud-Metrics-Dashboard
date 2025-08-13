@@ -15,13 +15,15 @@ func send_metrics(success bool, duration time.Duration) {
 	defer mu.Unlock()
 
 	if !success {
-		failed_requets++
+		failed_requests++
 		return
 	}
 
 	time_window += duration
 	requests_window++
 	total_requests++
+
+	fmt.Printf("total_requests: %d failed_requests: %d\n", total_requests, failed_requests)
 }
 
 func ApiResponse(url string) ([]byte, error) {

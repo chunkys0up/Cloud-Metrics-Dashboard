@@ -1,4 +1,4 @@
-package Metrics
+package main
 
 import (
 	"encoding/json"
@@ -36,13 +36,12 @@ func main() {
 	mux.HandleFunc("/getData/", http.HandlerFunc(sampleHTTPFunction))
 
 	// starting the server
-	fmt.Println("Server starting at http://localhost:8081")
-	go http.ListenAndServe(":8081", mux)
+	fmt.Println("Server starting at http://localhost:8080")
+	go http.ListenAndServe(":8080", mux)
 
-	// mock data 
 	// simulate 10 calls
-	for i := 0; i < 10;i++ {
-		testing, _ := ApiResponse("http://localhost:8081/getData")
-		fmt.Println(string(testing))
+	for i := 1; i <= 10;i++ {
+		fmt.Println(i)
+		Metrics.ApiResponse("http://localhost:8080/getData")
 	}
 }

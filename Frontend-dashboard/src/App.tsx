@@ -73,6 +73,10 @@ function App() {
 
       const data: Report = await response.json();
 
+      // console.log("CPU:", data.Metrics.ServerData.CpuUsed);
+      // console.log("Memory:", data.Metrics.ServerData.MemoryUsed);
+      // console.log("Disk:", data.Metrics.ServerData.DiskUsed);
+
       // set computer metrics
       const newMetrics: computerMetric[] = [
         { resource: "CPU", type: "used", percent: data.Metrics.ServerData.CpuUsed },
@@ -82,7 +86,7 @@ function App() {
         { resource: "Disk", type: "used", percent: data.Metrics.ServerData.DiskUsed },
         { resource: "Disk", type: "unused", percent: 100 - data.Metrics.ServerData.DiskUsed }
       ];
-      setComputerMetrics(prev => [...prev, ...newMetrics]);
+      setComputerMetrics(newMetrics);
 
       // update the total requests
       setRequestMetrics([

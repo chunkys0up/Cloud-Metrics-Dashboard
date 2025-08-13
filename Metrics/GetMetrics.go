@@ -10,13 +10,13 @@ import (
 	"github.com/shirou/gopsutil/v4/net"
 )
 
-func sampleMemory() float64 {
+func SampleMemory() float64 {
 	v, _ := mem.VirtualMemory()
 
 	return v.UsedPercent
 }
 
-func sampleDisk() float64 {
+func SampleDisk() float64 {
 	v, _ := disk.Usage("/")
 
 	return v.UsedPercent
@@ -25,7 +25,7 @@ func sampleDisk() float64 {
 // --- Go Routines ---
 
 // get the timed cpu usage every second
-func sampleCPU() {
+func SampleCPU() {
 	for {
 		percent, err := cpu.Percent(time.Second, false)
 		if err == nil && len(percent) > 0 {
@@ -37,7 +37,7 @@ func sampleCPU() {
 }
 
 // Times the Bytes sent and received and calculates the rate
-func sampleBytes() {
+func SampleBytes() {
 	kilobytes_per_second := float64(1) / 1000
 
 	for {
@@ -72,7 +72,7 @@ func sampleBytes() {
 
 // Creates a window of 1 second where the sum of time duration and requests are used to calculate the latency.
 // Resets window after second
-func sampleLatency() {
+func SampleLatency() {
 
 	for {
 		time.Sleep(1 * time.Second)

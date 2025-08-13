@@ -12,7 +12,7 @@ import (
 var (
 	mu              sync.Mutex
 	total_requests  int
-	failed_requets  int
+	failed_requests  int
 	cpu_usage       float64
 	bytesRecvRate   float64
 	bytesSentRate   float64
@@ -64,15 +64,15 @@ func ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 
-	memory_used := sampleMemory()
-	disk_used := sampleDisk()
+	memory_used := SampleMemory()
+	disk_used := SampleDisk()
 
 	report := Report{
 		Timestamp: time.Now().Format("2006-01-02T15:04:05"),
 		Metrics: Metrics{
 			SiteData: SiteData{
 				TotalRequests:    total_requests,
-				FailedRequests:   failed_requets,
+				FailedRequests:   failed_requests,
 				AverageLatencyMs: average_latency,
 			},
 			ServerData: ServerData{
@@ -94,17 +94,4 @@ func ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Write(jsonData)
-}
-
-func main() {
-	go sampleCPU()
-	go sampleBytes()
-	go sampleLatency()
-
-	mux := http.NewServeMux()
-	mux.HandleFunc("/get/", http.HandlerFunc(ServeHTTP))
-
-	// run the server
-	fmt.Println("Server starting at http://localhost:8080")
-	http.ListenAndServe(":8080", mux)
 }
