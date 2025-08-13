@@ -10,18 +10,21 @@ import (
 
 // global metrics
 var (
-	mu             sync.Mutex
-	total_requests int
-	failed_requets int
-	cpu_usage      float64
-	bytesRecvRate     float64
-	bytesSentRate     float64
+	mu              sync.Mutex
+	total_requests  int
+	failed_requets  int
+	cpu_usage       float64
+	bytesRecvRate   float64
+	bytesSentRate   float64
+	average_latency float64
+	time_window     time.Duration
+	requests_window int
 )
 
 type SiteData struct {
 	TotalRequests    int
 	FailedRequests   int
-	AverageLatencyMs []float64
+	AverageLatencyMs float64
 }
 
 type NetworkTraffic struct {
@@ -46,7 +49,7 @@ type Report struct {
 	Metrics   Metrics
 }
 
-// ---API CALL---
+// --- API
 func ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Unblocks CORS to host: 5173
 	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:5173")
@@ -59,11 +62,6 @@ func ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// edit this later and have a diff function process the requests and update the counters
-	mu.Lock()
-	total_requests++
-	mu.Unlock()
-
 	w.Header().Set("Content-Type", "application/json")
 
 	memory_used := sampleMemory()
@@ -75,7 +73,7 @@ func ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			SiteData: SiteData{
 				TotalRequests:    total_requests,
 				FailedRequests:   failed_requets,
-				AverageLatencyMs: []float64{140.2, 145.3, 148.7, 153.8, 141.3},
+				AverageLatencyMs: average_latency,
 			},
 			ServerData: ServerData{
 				CpuUsed:    cpu_usage,
@@ -101,6 +99,7 @@ func ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func main() {
 	go sampleCPU()
 	go sampleBytes()
+	go sampleLatency()
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/get/", http.HandlerFunc(ServeHTTP))

@@ -1,4 +1,4 @@
-module Server-backend
+module Metrics
 
 go 1.24.3
 

@@ -69,7 +69,7 @@ function App() {
   async function getData() {
     try {
       const response = await fetch(`http://localhost:8080/get/`);
-      if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+      if (!response.ok) throw new Error(`HTTP error, status: ${response.status}`);
 
       const data: Report = await response.json();
 

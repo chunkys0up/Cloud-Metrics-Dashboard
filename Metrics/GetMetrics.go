@@ -10,18 +10,6 @@ import (
 	"github.com/shirou/gopsutil/v4/net"
 )
 
-// get the timed cpu usage every second
-func sampleCPU() {
-	for {
-		percent, err := cpu.Percent(time.Second, false)
-		if err == nil && len(percent) > 0 {
-			mu.Lock()
-			cpu_usage = percent[0]
-			mu.Unlock()
-		}
-	}
-}
-
 func sampleMemory() float64 {
 	v, _ := mem.VirtualMemory()
 
@@ -34,6 +22,21 @@ func sampleDisk() float64 {
 	return v.UsedPercent
 }
 
+// --- Go Routines ---
+
+// get the timed cpu usage every second
+func sampleCPU() {
+	for {
+		percent, err := cpu.Percent(time.Second, false)
+		if err == nil && len(percent) > 0 {
+			mu.Lock()
+			cpu_usage = percent[0]
+			mu.Unlock()
+		}
+	}
+}
+
+// Times the Bytes sent and received and calculates the rate
 func sampleBytes() {
 	kilobytes_per_second := float64(1) / 1000
 
@@ -62,8 +65,30 @@ func sampleBytes() {
 
 		mu.Lock()
 		bytesRecvRate = bytesRecv / duration * float64(kilobytes_per_second)
-		bytesSentRate = bytesSent / duration  * float64(kilobytes_per_second)
+		bytesSentRate = bytesSent / duration * float64(kilobytes_per_second)
 		mu.Unlock()
 	}
 }
 
+// Creates a window of 1 second where the sum of time duration and requests are used to calculate the latency.
+// Resets window after second
+func sampleLatency() {
+
+	for {
+		time.Sleep(1 * time.Second)
+
+		// calculate average latency
+		mu.Lock()
+		
+		var avg_latency float64
+		if requests_window > 0 {
+			avg_latency = float64(time_window.Milliseconds()) / float64(requests_window)
+		}
+
+		average_latency = avg_latency
+		time_window = 0
+		requests_window = 0
+
+		mu.Unlock()
+	}
+}

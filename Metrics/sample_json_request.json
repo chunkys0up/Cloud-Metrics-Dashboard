@@ -4,15 +4,15 @@
     "site_data": {
       "total_requests": 120,
       "failed_requests": 13,
-      "average_latency_ms": [140.2, 145.3, 148.7, 153.8, 141.3]
+      "average_latency_ms": 23.4
     },
     "server_data": {
       "cpu_usage_percent": 13.3,  
       "memory_usage_percent": 10.7,
       "disk_usage_percent": 12.1,
       "network_traffic": {
-        "rx_bytes_per_sec": [1200, 1400, 1350, 1600, 1300],
-        "tx_bytes_per_sec": [1000, 1100, 1250, 1350, 1450]
+        "rx_bytes_per_sec": 11.3,
+        "tx_bytes_per_sec": 5.2
       }
     }
   }
