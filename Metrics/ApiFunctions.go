@@ -16,16 +16,12 @@ func ConnectToTracker(rdb *redis.Client, ctx context.Context) {
 }
 
 func send_metrics(success bool, duration time.Duration) {
-	// pseudo
-	// if fail, add to failed requests
-	// else, add time and request to window, to be calculated for average latency (ms)
+	MetricsCollected.RedisDB.Incr(MetricsCollected.Ctx, "total_requests")
 
 	if !success {
-		MetricsCollected.RedisDB.Incr(MetricsCollected.Ctx, "failed_requets")
+		MetricsCollected.RedisDB.Incr(MetricsCollected.Ctx, "failed_requests")
 		return
 	}
-
-	MetricsCollected.RedisDB.Incr(MetricsCollected.Ctx, "total_requests")
 
 	// now store the duration with the timestamp as the ID
 	err := MetricsCollected.RedisDB.XAdd(MetricsCollected.Ctx, &redis.XAddArgs{

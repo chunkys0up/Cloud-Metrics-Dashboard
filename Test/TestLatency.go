@@ -4,9 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math/rand"
+	"net/http"
+	"time"
+
 	"github.com/chunkys0up/Cloud-Metrics-Dashboard/Metrics"
 	"github.com/redis/go-redis/v9"
-	"net/http"
 )
 
 type SampleData struct {
@@ -62,11 +65,20 @@ func main() {
 	}
 	fmt.Println(string(resp))
 
-	// 3) Calls at random times with random amounts at a time (fix)
-	for i := 1; i <= 25; i++ {
-		fmt.Println("Call:", i)
-		Metrics.ApiResponse("http://localhost:8081/getData")
-	}
+	// 3) Calls 4 batches with random ammounts to make sure latency works
+	// does not count 404 errors as a failed request because it still "successfully" something
+	for i := range 4 {
+		fmt.Println("Batch:", i + 1)
+		m := rand.Intn(20) + 5
 
-	
+		for j := range m {
+			if j % 3 == 0 {
+				Metrics.ApiResponse("http://localhost:8082/failRequest")
+			} else {
+				Metrics.ApiResponse("http://localhost:8081/getData")
+			}
+		}
+
+		time.Sleep(3 * time.Second)
+	}
 }

@@ -84,7 +84,7 @@ func SampleBytes() {
 
 // Upates the window and updates the average latency
 func SampleLatency() float64 {
-	current_time_ms := strconv.FormatInt(time.Now().UnixMilli()-60000, 10)
+	current_time_ms := strconv.FormatInt(time.Now().UnixMilli()-10000, 10)
 	_, err := MetricsCollected.RedisDB.XTrimMinID(MetricsCollected.Ctx, "time_window", current_time_ms).Result()
 	if err != nil {
 		panic(err)
