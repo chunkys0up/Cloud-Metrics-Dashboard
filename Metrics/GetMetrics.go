@@ -1,14 +1,28 @@
 package Metrics
 
 import (
+	"context"
 	"fmt"
+	"strconv"
+	"sync"
 	"time"
 
+	"github.com/redis/go-redis/v9"
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/disk"
 	"github.com/shirou/gopsutil/v4/mem"
 	"github.com/shirou/gopsutil/v4/net"
 )
+
+var MetricsCollected struct {
+	mu      sync.Mutex
+	RedisDB *redis.Client
+	Ctx     context.Context
+
+	CpuUsed       float64
+	BytesRecvRate float64
+	BytesSentRate float64
+}
 
 func SampleMemory() float64 {
 	v, _ := mem.VirtualMemory()
@@ -22,16 +36,14 @@ func SampleDisk() float64 {
 	return v.UsedPercent
 }
 
-// --- Go Routines ---
-
 // get the timed cpu usage every second
 func SampleCPU() {
 	for {
 		percent, err := cpu.Percent(time.Second, false)
 		if err == nil && len(percent) > 0 {
-			mu.Lock()
-			cpu_usage = percent[0]
-			mu.Unlock()
+			MetricsCollected.mu.Lock()
+			MetricsCollected.CpuUsed = percent[0]
+			MetricsCollected.mu.Unlock()
 		}
 	}
 }
@@ -63,32 +75,49 @@ func SampleBytes() {
 		bytesRecv := float64(endIoData[0].BytesRecv - initialIoData[0].BytesRecv)
 		bytesSent := float64(endIoData[0].BytesSent - initialIoData[0].BytesSent)
 
-		mu.Lock()
-		bytesRecvRate = bytesRecv / duration * float64(kilobytes_per_second)
-		bytesSentRate = bytesSent / duration * float64(kilobytes_per_second)
-		mu.Unlock()
+		MetricsCollected.mu.Lock()
+		MetricsCollected.BytesRecvRate = bytesRecv / duration * float64(kilobytes_per_second)
+		MetricsCollected.BytesSentRate = bytesSent / duration * float64(kilobytes_per_second)
+		MetricsCollected.mu.Unlock()
 	}
 }
 
-// Creates a window of 1 second where the sum of time duration and requests are used to calculate the latency.
-// Resets window after second
-func SampleLatency() {
-
-	for {
-		time.Sleep(1 * time.Second)
-
-		// calculate average latency
-		mu.Lock()
-		
-		var avg_latency float64
-		if requests_window > 0 {
-			avg_latency = float64(time_window.Milliseconds()) / float64(requests_window)
-		}
-
-		average_latency = avg_latency
-		time_window = 0
-		requests_window = 0
-
-		mu.Unlock()
+// Upates the window and updates the average latency
+func SampleLatency() float64 {
+	current_time_ms := strconv.FormatInt(time.Now().UnixMilli()-60000, 10)
+	_, err := MetricsCollected.RedisDB.XTrimMinID(MetricsCollected.Ctx, "time_window", current_time_ms).Result()
+	if err != nil {
+		panic(err)
 	}
+
+	// get response amounts
+	request_window, err := MetricsCollected.RedisDB.XLen(MetricsCollected.Ctx, "time_window").Result()
+	if err != nil {
+		panic(err)
+	}
+
+	// get the entries in the window
+	entries, err := MetricsCollected.RedisDB.XRange(MetricsCollected.Ctx, "time_window", "-", "+").Result()
+	if err != nil {
+		panic(err)
+	}
+
+	// calculate duration sum
+	var total_time int64
+	for _, entry := range entries {
+		raw := entry.Values["duration_ms"].(string)
+		converted, err := strconv.ParseInt(raw, 10, 64)
+		if err != nil {
+			fmt.Println("Failed to convert:", err)
+			return 0
+		}
+		total_time += converted
+	}
+
+	if request_window > 0 {
+		average_latency := float64(total_time) / float64(request_window)
+		return average_latency
+	}
+
+	return 0
 }

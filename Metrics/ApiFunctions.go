@@ -1,29 +1,44 @@
 package Metrics
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
 	"time"
+
+	"github.com/redis/go-redis/v9"
 )
+
+func ConnectToTracker(rdb *redis.Client, ctx context.Context) {
+	MetricsCollected.RedisDB = rdb
+	MetricsCollected.Ctx = ctx
+}
 
 func send_metrics(success bool, duration time.Duration) {
 	// pseudo
 	// if fail, add to failed requests
 	// else, add time and request to window, to be calculated for average latency (ms)
-	mu.Lock()
-	defer mu.Unlock()
 
 	if !success {
-		failed_requests++
+		MetricsCollected.RedisDB.Incr(MetricsCollected.Ctx, "failed_requets")
 		return
 	}
 
-	time_window += duration
-	requests_window++
-	total_requests++
+	MetricsCollected.RedisDB.Incr(MetricsCollected.Ctx, "total_requests")
 
-	fmt.Printf("total_requests: %d failed_requests: %d\n", total_requests, failed_requests)
+	// now store the duration with the timestamp as the ID
+	err := MetricsCollected.RedisDB.XAdd(MetricsCollected.Ctx, &redis.XAddArgs{
+		Stream: "time_window",
+		ID:     "*",
+		Values: map[string]any{
+			"duration_ms": duration.Milliseconds(),
+		},
+	}).Err()
+
+	if err != nil {
+		panic(err)
+	}
 }
 
 func ApiResponse(url string) ([]byte, error) {
@@ -50,5 +65,4 @@ func ApiResponse(url string) ([]byte, error) {
 	go send_metrics(true, duration)
 
 	return body, nil
-
 }
