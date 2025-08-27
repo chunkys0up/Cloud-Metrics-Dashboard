@@ -1,30 +1,7 @@
 import './style.css';
 import { LineGraph, BarGraph, StackedBarsGraph, MultiLineChart } from './Metric-Graphs/Graphs';
 import { useEffect, useState } from 'react';
-
-interface SiteData {
-  TotalRequests: number;
-  FailedRequests: number;
-  AverageLatencyMs: number[];
-}
-interface NetworkTraffic {
-  RxBytesRate: number;
-  TxBytesRate: number;
-}
-interface ServerData {
-  CpuUsed: number;
-  MemoryUsed: number;
-  DiskUsed: number;
-  NetworkTraffic: NetworkTraffic;
-}
-interface Metrics {
-  SiteData: SiteData;
-  ServerData: ServerData;
-}
-interface Report {
-  Timestamp: string;
-  Metrics: Metrics;
-}
+import type { Report, ComputerMetric, NetworkMetric } from './redis-data/DataTypes';
 
 const initialRequestMetrics = [
   { column_name: "Total Requests", column_value: 0 },
@@ -49,22 +26,12 @@ const sampleLineData = [
   { date: "2023-01-01T00:00:14", ms: 155 }
 ];
 
-type computerMetric = {
-  resource: "CPU" | "Memory" | "Disk";
-  type: "used" | "unused";
-  percent: number;
-}
 
-type networkMetric = {
-  date: string;
-  value: number;
-  symbol: "RX" | "TX";
-}
 
 function App() {
-  const [computerMetrics, setComputerMetrics] = useState<computerMetric[]>([]);
+  const [computerMetrics, setComputerMetrics] = useState<ComputerMetric[]>([]);
   const [requestMetrics, setRequestMetrics] = useState(initialRequestMetrics);
-  const [multiLineData, setMultiLineData] = useState<networkMetric[]>([]);
+  const [multiLineData, setMultiLineData] = useState<NetworkMetric[]>([]);
 
   async function getData() {
     try {
@@ -78,7 +45,7 @@ function App() {
       // console.log("Disk:", data.Metrics.ServerData.DiskUsed);
 
       // set computer metrics
-      const newMetrics: computerMetric[] = [
+      const newMetrics: ComputerMetric[] = [
         { resource: "CPU", type: "used", percent: data.Metrics.ServerData.CpuUsed },
         { resource: "CPU", type: "unused", percent: 100 - data.Metrics.ServerData.CpuUsed },
         { resource: "Memory", type: "used", percent: data.Metrics.ServerData.MemoryUsed },
@@ -95,12 +62,12 @@ function App() {
       ]);
 
       // add to the multilined graph
-      const rxMetric: networkMetric = {
+      const rxMetric: NetworkMetric = {
         date: data.Timestamp,
         value: data.Metrics.ServerData.NetworkTraffic.RxBytesRate,
         symbol: "RX"
       };
-      const txMetric: networkMetric = {
+      const txMetric: NetworkMetric = {
         date: data.Timestamp,
         value: data.Metrics.ServerData.NetworkTraffic.TxBytesRate,
         symbol: "TX"

@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"sync"
 	"time"
-
 	"github.com/redis/go-redis/v9"
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/disk"
@@ -83,7 +82,7 @@ func SampleBytes() {
 }
 
 // Upates the window and updates the average latency
-func SampleLatency() float64 {
+func SampleLatency() float32 {
 	current_time_ms := strconv.FormatInt(time.Now().UnixMilli()-10000, 10)
 	_, err := MetricsCollected.RedisDB.XTrimMinID(MetricsCollected.Ctx, "time_window", current_time_ms).Result()
 	if err != nil {
@@ -115,9 +114,53 @@ func SampleLatency() float64 {
 	}
 
 	if request_window > 0 {
-		average_latency := float64(total_time) / float64(request_window)
+		average_latency := float32(total_time) / float32(request_window)
 		return average_latency
 	}
 
 	return 0
+}
+
+func getRedisValue(key string) int64 {
+	raw, err := MetricsCollected.RedisDB.Get(MetricsCollected.Ctx, key).Result()
+	if err != nil {
+		return 0
+	}
+
+	converted, err := strconv.ParseInt(raw, 10, 64)
+	if err != nil {
+		return 0
+	}
+
+	return converted
+}
+
+// create stream that adds metrics to redis
+func addStream() {
+	total_requests := getRedisValue("total_requests")
+	failed_requests := getRedisValue("failed_requests")
+
+	latency_ms := SampleLatency()
+	memory_used := SampleMemory()
+	disk_used := SampleDisk()
+
+	id, err := MetricsCollected.RedisDB.XAdd(MetricsCollected.Ctx, &redis.XAddArgs{
+		Stream: "mystream",
+		Values: map[string]any{
+			"total_requests":     total_requests,
+			"failed_requests":    failed_requests,
+			"average_latency_ms": latency_ms,
+			"cpu_usage":          MetricsCollected.CpuUsed,
+			"memory_usage":       memory_used,
+			"disk_usage":         disk_used,
+			"rx_bps":             MetricsCollected.BytesRecvRate,
+			"tx_bps":             MetricsCollected.BytesSentRate,
+		},
+	}).Result()
+
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("Latest id: %s\n", id)
 }
