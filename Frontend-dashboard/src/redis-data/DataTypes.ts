@@ -1,3 +1,8 @@
+export type LatencyMetric = {
+  date: string;
+  ms: number;
+};
+
 export type ComputerMetric = {
   resource: "CPU" | "Memory" | "Disk";
   type: "used" | "unused";
@@ -8,28 +13,21 @@ export type NetworkMetric = {
   date: string;
   value: number;
   symbol: "RX" | "TX";
-}
+};
 
-export interface SiteData { 
+export type RequestMetric = {
+  column_name: string;
+  column_value: number;
+};
+
+export interface Report {
+  Timestamp: string;
   TotalRequests: number;
   FailedRequests: number;
-  AverageLatencyMs: number[];
-}
-export interface NetworkTraffic {
-  RxBytesRate: number;
-  TxBytesRate: number;
-}
-export interface ServerData {
+  AverageLatency: number;
   CpuUsed: number;
   MemoryUsed: number;
   DiskUsed: number;
-  NetworkTraffic: NetworkTraffic;
-}
-export interface Metrics {
-  SiteData: SiteData;
-  ServerData: ServerData;
-}
-export interface Report {
-  Timestamp: string;
-  Metrics: Metrics;
+  RxBytesRate: number;
+  TxBytesRate: number;
 }

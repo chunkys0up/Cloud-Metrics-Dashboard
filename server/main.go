@@ -101,11 +101,16 @@ func main() {
 		for {
 			time.Sleep(1 * time.Second)
 			Metrics.AddStream()
+
+			// clean stream (won't affect the sliding window for average latency)
+			_, err := rdb.XTrimMaxLen(ctx, "mystream", 50).Result()
+			if err != nil {
+				panic(err)
+			}
 		}
 	}()
 
 	<-quit
-
 	// Clears database
 	err := rdb.FlushDB(ctx).Err()
 	if err != nil {
