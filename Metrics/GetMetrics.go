@@ -3,14 +3,14 @@ package Metrics
 import (
 	"context"
 	"fmt"
-	"strconv"
-	"sync"
-	"time"
 	"github.com/redis/go-redis/v9"
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/disk"
 	"github.com/shirou/gopsutil/v4/mem"
 	"github.com/shirou/gopsutil/v4/net"
+	"strconv"
+	"sync"
+	"time"
 )
 
 var MetricsCollected struct {
@@ -82,7 +82,7 @@ func SampleBytes() {
 }
 
 // Upates the window and updates the average latency
-func SampleLatency() float32 {
+func SampleLatency() float64 {
 	current_time_ms := strconv.FormatInt(time.Now().UnixMilli()-10000, 10)
 	_, err := MetricsCollected.RedisDB.XTrimMinID(MetricsCollected.Ctx, "time_window", current_time_ms).Result()
 	if err != nil {
@@ -114,7 +114,7 @@ func SampleLatency() float32 {
 	}
 
 	if request_window > 0 {
-		average_latency := float32(total_time) / float32(request_window)
+		average_latency := float64(total_time) / float64(request_window)
 		return average_latency
 	}
 
@@ -127,16 +127,11 @@ func getRedisValue(key string) int64 {
 		return 0
 	}
 
-	converted, err := strconv.ParseInt(raw, 10, 64)
-	if err != nil {
-		return 0
-	}
-
-	return converted
+	return ToInt64(raw)
 }
 
 // create stream that adds metrics to redis
-func addStream() {
+func AddStream() {
 	total_requests := getRedisValue("total_requests")
 	failed_requests := getRedisValue("failed_requests")
 
@@ -163,4 +158,25 @@ func addStream() {
 	}
 
 	fmt.Printf("Latest id: %s\n", id)
+}
+
+// converts raw string to int64
+func ToInt64(raw string) int64 {
+	i64, err := strconv.ParseInt(raw, 10, 64)
+	if err != nil {
+		fmt.Print("Failed to convert to Int 64\n")
+		return 0
+	}
+
+	return i64
+}
+
+func ToFloat64(raw string) float64 {
+	f64, err := strconv.ParseFloat(raw, 64)
+	if err != nil {
+		fmt.Print("Failed to convert to Float 64\n")
+		return 0
+	}
+
+	return f64
 }

@@ -20,12 +20,12 @@ type Report struct {
 	Timestamp      string
 	TotalRequests  int64
 	FailedRequests int64
-	AverageLatency float32
+	AverageLatency float64
 	CpuUsed        float64
 	MemoryUsed     float64
 	DiskUsed       float64
-	RxBytesRate    float32
-	TxBytesRate    float32
+	RxBytesRate    float64
+	TxBytesRate    float64
 }
 
 // ---API CALL---
@@ -34,25 +34,30 @@ func ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:5173")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
 
-	// Handle preflight OPTIONS request
-	if r.Method == http.MethodOptions {
-		w.WriteHeader(http.StatusOK)
-		return
+	stream, err := rdb.XRead(ctx, &redis.XReadArgs{
+		Streams: []string{"mystream", "$"},
+		Block: 0,
+		Count: 1,
+	}).Result()
+
+	if err != nil {
+		panic(err)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	latest := stream[0].Messages[0].Values
 
 	report := Report{
 		Timestamp:      time.Now().Format("2006-01-02T15:04:05"),
-		TotalRequests:  120,
-		FailedRequests: 13,
-		AverageLatency: 9.4,
-		CpuUsed:        67.8,
-		MemoryUsed:     45.8,
-		DiskUsed:       12.3,
-		RxBytesRate:    1200.4,
-		TxBytesRate:    604.3,
+		TotalRequests:  Metrics.ToInt64(latest["total_requests"].(string)),
+		FailedRequests: Metrics.ToInt64(latest["failed_requests"].(string)),
+		AverageLatency: Metrics.ToFloat64(latest["average_latency_ms"].(string)),
+		CpuUsed:        Metrics.ToFloat64(latest["cpu_usage"].(string)),
+		MemoryUsed:     Metrics.ToFloat64(latest["memory_usage"].(string)),
+		DiskUsed:       Metrics.ToFloat64(latest["disk_usage"].(string)),
+		RxBytesRate:    Metrics.ToFloat64(latest["rx_bps"].(string)),
+		TxBytesRate:    Metrics.ToFloat64(latest["tx_bps"].(string)),
 	}
 
 	jsonData, err := json.MarshalIndent(report, "", "  ")
@@ -66,7 +71,10 @@ func ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/get/", http.HandlerFunc(ServeHTTP))
+	mux.HandleFunc("/getData", http.HandlerFunc(ServeHTTP))
+
+	fmt.Println("Server starting at http://localhost:8080")
+    go http.ListenAndServe(":8080", mux)
 
 	rdb = redis.NewClient(&redis.Options{
 		Addr:     "localhost:6379",
@@ -77,7 +85,7 @@ func main() {
 
 	// Share redis client and context
 	// created ctx and redis client for adding stream
-	// on the client side, will create another rdb so we can send data to db that will be added to stream
+	// on the client side, will create another rdb so we can send data to the redis that will be added to stream
 	Metrics.ConnectToTracker(rdb, ctx)
 
 	fmt.Print("Metric Sampling starting...\n")
@@ -92,26 +100,11 @@ func main() {
 	go func() {
 		for {
 			time.Sleep(1 * time.Second)
-			Metrics.addStream()
+			Metrics.AddStream()
 		}
 	}()
 
 	<-quit
-	// fmt.Println("\nStream entries")
-	// entries, err := rdb.XRange(ctx, "mystream", "-", "+").Result()
-	// if err != nil {
-	// 	panic(err)
-	// }
-
-	// for index, entry := range entries {
-	// 	fmt.Printf("%d) 1) \"%s\"\n", index, entry.ID)
-	// 	i := 2
-	// 	for k, v := range entry.Values {
-	// 		fmt.Printf("   %d) \"%s\"\n", i, k)
-	// 		fmt.Printf("   %d) \"%v\"\n", i+1, v)
-	// 		i += 2
-	// 	}
-	// }
 
 	// Clears database
 	err := rdb.FlushDB(ctx).Err()
