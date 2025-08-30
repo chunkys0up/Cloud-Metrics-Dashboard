@@ -89,7 +89,7 @@ func SampleLatency() float64 {
 		panic(err)
 	}
 
-	// get response amounts
+	// get responses in during the window
 	request_window, err := MetricsCollected.RedisDB.XLen(MetricsCollected.Ctx, "time_window").Result()
 	if err != nil {
 		panic(err)
@@ -101,7 +101,7 @@ func SampleLatency() float64 {
 		panic(err)
 	}
 
-	// calculate duration sum
+	// calculate duration sum in milliseconds
 	var total_time int64
 	for _, entry := range entries {
 		raw := entry.Values["duration_ms"].(string)
@@ -139,7 +139,7 @@ func AddStream() {
 	memory_used := SampleMemory()
 	disk_used := SampleDisk()
 
-	id, err := MetricsCollected.RedisDB.XAdd(MetricsCollected.Ctx, &redis.XAddArgs{
+	_, err := MetricsCollected.RedisDB.XAdd(MetricsCollected.Ctx, &redis.XAddArgs{
 		Stream: "mystream",
 		Values: map[string]any{
 			"total_requests":     total_requests,
@@ -157,7 +157,7 @@ func AddStream() {
 		panic(err)
 	}
 
-	fmt.Printf("Latest id: %s\n", id)
+	// fmt.Printf("Latest id: %s\n", id)
 }
 
 // converts raw string to int64

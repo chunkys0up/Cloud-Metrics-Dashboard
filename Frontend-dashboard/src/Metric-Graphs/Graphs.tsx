@@ -9,13 +9,18 @@ export function LineGraph({ data }: any) {
 
     chartRef.current.innerHTML = "";
 
+    const dataMax = Math.max(...data.map((d: any) => d.ms));
+    const defaultMax = 10;
+
+    const xMax = Math.max(defaultMax, dataMax);
+
     const chart = Plot.plot({
       width: chartRef.current.clientWidth,
       height: chartRef.current.clientHeight,
       x: { grid: true, label: "Date" },
       y: { grid: true, label: "Average Latency (ms)" },
       marks: [
-        Plot.ruleY([0]),
+        Plot.ruleY([xMax  ]),
         Plot.lineY(data, { x: d => new Date(d.date), y: "ms", stroke: "blue" })
       ]
     });

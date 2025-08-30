@@ -3,8 +3,6 @@ import { LineGraph, BarGraph, StackedBarsGraph, MultiLineChart } from './Metric-
 import { useEffect, useState } from 'react';
 import type { Report, LatencyMetric, ComputerMetric, NetworkMetric, RequestMetric } from './redis-data/DataTypes';
 
-
-
 function App() {
   const [latencyMetrics, setLatencyMetrics] = useState<LatencyMetric[]>([]);
   const [computerMetrics, setComputerMetrics] = useState<ComputerMetric[]>([]);
@@ -42,10 +40,6 @@ function App() {
         { resource: "Disk", type: "used", percent: data.DiskUsed },
         { resource: "Disk", type: "unused", percent: 100 - data.DiskUsed }
       ];
-
-      console.log("Cpu usage:", data.CpuUsed);
-      console.log("Memory usage:", data.MemoryUsed);
-      console.log("Disk usage:", data.DiskUsed);
 
       setComputerMetrics(newMetrics);
 

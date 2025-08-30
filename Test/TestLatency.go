@@ -7,7 +7,6 @@ import (
 	"math/rand"
 	"net/http"
 	"time"
-
 	"github.com/chunkys0up/Cloud-Metrics-Dashboard/Metrics"
 	"github.com/redis/go-redis/v9"
 )
@@ -38,7 +37,7 @@ func sampleHTTPFunction(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/getData", http.HandlerFunc(sampleHTTPFunction))
+	mux.HandleFunc("/getMetrics", http.HandlerFunc(sampleHTTPFunction))
 
 	// starting the server
 	fmt.Println("Server starting at http://localhost:8081")
@@ -59,7 +58,7 @@ func main() {
 
 	// 2) Test Api response through custom function that tracks the speed of call
 	fmt.Print("Testing api response\n")
-	resp, err := Metrics.ApiResponse("http://localhost:8081/getData")
+	resp, err := Metrics.ApiResponse("http://localhost:8081/getMetrics")
 	if err != nil {
 		panic(err)
 	}
@@ -75,10 +74,16 @@ func main() {
 			if j % 3 == 0 {
 				Metrics.ApiResponse("http://localhost:8082/failRequest")
 			} else {
-				Metrics.ApiResponse("http://localhost:8081/getData")
+				Metrics.ApiResponse("http://localhost:8081/getMetrics")
 			}
 		}
 
 		time.Sleep(3 * time.Second)
+	}
+
+	// 4) Calls 1000 times
+	fmt.Print("Calling 1000 times\n")
+	for range 1000 {
+		Metrics.ApiResponse("http://localhost:8081/getMetrics")
 	}
 }

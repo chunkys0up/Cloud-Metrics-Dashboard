@@ -2,19 +2,19 @@ package Metrics
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"net/http"
 	"time"
-
 	"github.com/redis/go-redis/v9"
 )
 
+// Connects redis client to redis server to aggregate data
 func ConnectToTracker(rdb *redis.Client, ctx context.Context) {
 	MetricsCollected.RedisDB = rdb
 	MetricsCollected.Ctx = ctx
 }
 
+// Update requests metrics and adds a stream to the time window
 func send_metrics(success bool, duration time.Duration) {
 	MetricsCollected.RedisDB.Incr(MetricsCollected.Ctx, "total_requests")
 
@@ -37,12 +37,13 @@ func send_metrics(success bool, duration time.Duration) {
 	}
 }
 
+// Used to parse through 
 func ApiResponse(url string) ([]byte, error) {
 	start_time := time.Now()
 
 	resp, err := http.Get(url)
 	if err != nil {
-		fmt.Println("Error requesting api:", err)
+		// fmt.Println("Error requesting api:", err)
 		go send_metrics(false, 0)
 		return nil, err
 	}
@@ -50,7 +51,7 @@ func ApiResponse(url string) ([]byte, error) {
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println("error reading response body:", err)
+		// fmt.Println("error reading response body:", err)
 		go send_metrics(false, 0)
 		return nil, err
 	}
