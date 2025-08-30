@@ -12,7 +12,7 @@ Lightweight cloud metrics dashboard that uses Typescript, Go, and Redis. Support
 ## Installation
 
 ### Prerequisites
-Redis, Go and Node.js
+Redis, Go and Typescript
 
 ### Clone Repo
 ```
